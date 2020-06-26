@@ -1,0 +1,39 @@
+---
+
+- name: Add repo
+  template:
+    src: unit.repo.j2
+    dest: /etc/yum.repos.d/unit.repo
+
+- name: Install nginx unit
+  yum:
+    name:
+      - nginx
+      - unit
+      - unit-python36
+      - python3-flask
+    state: present
+
+- name: Start unit
+  service:
+    name: unit
+    enabled: yes
+    state: started
+
+- name: Create code directory
+  file:
+    dest: "/var/www/flask-app/"
+    state: directory
+
+- name: Deploy code
+  copy:
+    src: "wsgi.py"
+    dest: "/var/www/flask-app/wsgi.py"
+
+- name: Deploy unit config
+  template:
+    src: unit.json.j2
+    dest: /root/unit.json
+
+- name: Deploy unit config
+  shell: "curl -X PUT --data-binary @/root/unit.json --unix-socket /var/run/unit/control.sock http://localhost/config"

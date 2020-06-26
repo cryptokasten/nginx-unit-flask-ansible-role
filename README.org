@@ -1,0 +1,117 @@
+#+TITLE: Nginx unit flask ansible role
+
+** Tasks
+*** main
+
+#+BEGIN_SRC yaml :tangle ansible/tasks/main.yml
+---
+#+END_SRC
+
+**** Add repo
+
+#+BEGIN_SRC yaml :tangle ansible/tasks/main.yml
+- name: Add repo
+  template:
+    src: unit.repo.j2
+    dest: /etc/yum.repos.d/unit.repo
+#+END_SRC
+
+**** Install nginx unit
+
+#+BEGIN_SRC yaml :tangle ansible/tasks/main.yml
+- name: Install nginx unit
+  yum:
+    name: 
+      - nginx
+      - unit
+      - unit-python36
+      - python3-flask
+    state: present
+#+END_SRC
+
+**** Start unit
+
+#+BEGIN_SRC yaml :tangle ansible/tasks/main.yml
+- name: Start unit
+  service:
+    name: unit
+    enabled: yes
+    state: started
+#+END_SRC
+
+**** Create app directory
+
+#+BEGIN_SRC yaml :tangle ansible/tasks/main.yml
+- name: Create app directory
+  file:
+    dest: "/var/www/flask-app/"
+    state: directory
+#+END_SRC
+
+**** Deploy code
+
+#+BEGIN_SRC yaml :tangle ansible/tasks/main.yml
+- name: Deploy code
+  copy:
+    src: "wsgi.py"
+    dest: "/var/www/flask-app/wsgi.py"
+#+END_SRC
+
+**** Copy unit config
+
+#+BEGIN_SRC yaml :tangle ansible/tasks/main.yml
+- name: Deploy unit config
+  template:
+    src: unit.json.j2
+    dest: /root/unit.json
+#+END_SRC
+
+**** Deploy unit config
+
+#+BEGIN_SRC yaml :tangle ansible/tasks/main.yml
+- name: Deploy unit config
+  shell: "curl -X PUT --data-binary @/root/unit.json --unix-socket /var/run/unit/control.sock http://localhost/config"
+#+END_SRC
+
+** Templates
+*** unit.repo.j2
+
+#+BEGIN_SRC conf :tangle ansible/templates/unit.repo.j2
+[unit]
+name=unit repo
+baseurl=https://packages.nginx.org/unit/centos/$releasever/$basearch/
+gpgcheck=0
+enabled=1
+#+END_SRC
+
+*** unit.json.j2
+
+#+BEGIN_SRC conf :tangle ansible/templates/unit.json.j2
+{
+    "listeners": {
+        "*:8080": {
+            "pass": "applications/flask_app"
+        }
+    },
+
+    "applications": {
+        "flask_app": {
+            "type": "python 3",
+            "path": "/var/www/flask-app/",
+            "module": "wsgi"
+        }
+    }
+}
+#+END_SRC
+
+** Files
+*** wsgi.py
+
+#+BEGIN_SRC python :tangle ansible/files/wsgi.py
+from flask import Flask
+application = Flask(__name__)
+
+@application.route("/")
+def hello_world():
+    return "Hello, World!\n"
+#+END_SRC
