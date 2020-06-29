@@ -7,11 +7,12 @@
 
 - name: Install nginx unit
   yum:
-    name:
+    name: 
       - nginx
       - unit
       - unit-python36
       - python3-flask
+      - python3-requests
     state: present
 
 - name: Start unit
@@ -20,7 +21,7 @@
     enabled: yes
     state: started
 
-- name: Create code directory
+- name: Create app directory
   file:
     dest: "/var/www/flask-app/"
     state: directory
